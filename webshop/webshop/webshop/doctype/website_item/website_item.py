@@ -54,34 +54,47 @@ class WebsiteItem(WebsiteGenerator):
 	
 	def generate_qr(self):
 		"""Generate QR code for the Website Item and store file URL in qr_code field."""
-		# URL format
-		base_url = frappe.local.conf.get("base_url") or ""
+		try:
+			# URL format
+			base_url = frappe.local.conf.get("base_url") or ""
+			frappe.log_error(f"Base URL: {base_url}", "QR Generation Debug")  # debug
 
-		# Build QR URL
-		url = f"http://65.0.52.105:8013/website-item?id={self.name}"
+			# Build QR URL
+			url = f"http://65.0.52.105:8013/website-item?id={self.name}"
+			frappe.log_error(f"QR URL: {url}", "QR Generation Debug")  # debug
 
-		# Generate QR code image
-		qr_img = qrcode.make(url)
+			# Generate QR code image
+			if not qrcode:
+				frappe.log_error("qrcode module not found", "QR Generation Debug")
+				return
+			qr_img = qrcode.make(url)
+			frappe.log_error("QR image generated", "QR Generation Debug")  # debug
 
-		# Convert image to bytes
-		import io
-		buffer = io.BytesIO()
-		qr_img.save(buffer, format="PNG")
-		img_bytes = buffer.getvalue()
+			# Convert image to bytes
+			import io
+			buffer = io.BytesIO()
+			qr_img.save(buffer, format="PNG")
+			img_bytes = buffer.getvalue()
+			frappe.log_error(f"QR bytes length: {len(img_bytes)}", "QR Generation Debug")  # debug
 
-		# Save file to File doctype (public)
-		file_doc = save_file(
-			f"{self.name}_qr.png",
-			img_bytes,
-			"Website Item",
-			self.name,
-			is_private=0,
-			decode=False,
-		)
+			# Save file to File doctype (public)
+			file_doc = save_file(
+				f"{self.name}_qr.png",
+				img_bytes,
+				"Website Item",
+				self.name,
+				is_private=0,
+				decode=False,
+			)
+			frappe.log_error(f"File saved: {file_doc.file_url}", "QR Generation Debug")  # debug
 
-		# Update field only if changed
-		if file_doc.file_url != self.qr_code:
-			self.db_set("qr_code", file_doc.file_url)
+			# Update field only if changed
+			if file_doc.file_url != self.qr_code:
+				self.db_set("qr_code", file_doc.file_url)
+				frappe.log_error(f"QR code field updated: {file_doc.file_url}", "QR Generation Debug")
+
+		except Exception as e:
+			frappe.log_error(f"Error in generate_qr: {str(e)}", "QR Generation Debug")
 
 	def onload(self):
 		super(WebsiteItem, self).onload()
