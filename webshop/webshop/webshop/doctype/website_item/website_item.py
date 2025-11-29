@@ -3,6 +3,9 @@
 # For license information, please see license.txt
 
 import json
+import qrcode
+import base64
+from frappe.utils.file_manager import save_file
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -48,6 +51,37 @@ class WebsiteItem(WebsiteGenerator):
 		naming_series = get_default_naming_series("Website Item")
 		if not self.name and naming_series:
 			self.name = make_autoname(naming_series, doc=self)
+	
+	def generate_qr(self):
+		"""Generate QR code for the Website Item and store file URL in qr_code field."""
+		# URL format
+		base_url = frappe.local.conf.get("base_url") or ""
+
+		# Build QR URL
+		url = f"{base_url}/website-item?id={self.name}"
+
+		# Generate QR code image
+		qr_img = qrcode.make(url)
+
+		# Convert image to bytes
+		import io
+		buffer = io.BytesIO()
+		qr_img.save(buffer, format="PNG")
+		img_bytes = buffer.getvalue()
+
+		# Save file to File doctype (public)
+		file_doc = save_file(
+			f"{self.name}_qr.png",
+			img_bytes,
+			"Website Item",
+			self.name,
+			is_private=0,
+			decode=False,
+		)
+
+		# Update field only if changed
+		if file_doc.file_url != self.qr_code:
+			self.db_set("qr_code", file_doc.file_url)
 
 	def onload(self):
 		super(WebsiteItem, self).onload()
@@ -81,6 +115,8 @@ class WebsiteItem(WebsiteGenerator):
 	def on_update(self):
 		invalidate_cache_for_web_item(self)
 		self.update_template_item()
+
+		self.generate_qr()
 
 	def on_trash(self):
 		super(WebsiteItem, self).on_trash()
