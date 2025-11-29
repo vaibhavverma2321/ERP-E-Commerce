@@ -58,7 +58,7 @@ class WebsiteItem(WebsiteGenerator):
 		base_url = frappe.local.conf.get("base_url") or ""
 
 		# Build QR URL
-		url = f"{base_url}/website-item?id={self.name}"
+		url = f"http://65.0.52.105:8013/website-item?id={self.name}"
 
 		# Generate QR code image
 		qr_img = qrcode.make(url)
